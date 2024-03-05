@@ -230,6 +230,11 @@ get_donor_selection() {
  local rootfs_partitions="$1"
  local target="$2"
  local i=1;
+
+ # Print the selector for the donor partitions
+ print_donor_selector "$rootfs_partitions"
+
+ # Prompt the user for their selection
  read -p "Your selection: " selection
 
  for rootfs_partition in $rootfs_partitions; do
@@ -243,13 +248,23 @@ get_donor_selection() {
 
     if [ "$selection" = "$i" ]; then
       echo "selected $part_path as the donor partition"
-      read -p "would you like to spoof verified mode? this is useful if you're planning on using chrome os while enrolled. (y/n): " use_crossystem
+      read -p "Would you like to spoof verified mode? (y/n): " use_crossystem
 
       if [ "$use_crossystem" = "y" ] || [ "$use_crossystem" = "n" ]; then
+        read -p "Would you like to spoof an invalid HWID (unenroll)? (y/n): " spoof_hwid
+        if [ "$spoof_hwid" = "y" ]; then
+          spoof_invalid_hwid $target "hwid" "block_devmode"
+        elif [ "$spoof_hwid" = "n" ]; then
+          spoof_invalid_hwid $target "block_devmode" "hwid"
+        else
+          echo "Invalid selection."
+          sleep 1
+          return 1
+        fi
         boot_chromeos $target $part_path $use_crossystem
         return 0
       else
-        echo "invalid selection"
+        echo "Invalid selection."
         sleep 1
         return 1
       fi
@@ -258,23 +273,12 @@ get_donor_selection() {
     i=$((i+1))
  done
 
- read -p "Would you like to spoof an invalid HWID (unenroll)? (y/n): " spoof_hwid
- if [ "$spoof_hwid" = "y" ]; then
-    spoof_invalid_hwid $target "hwid" "block_devmode"
-    return 0
- elif [ "$spoof_hwid" = "n" ]; then
-    spoof_invalid_hwid $target "block_devmode" "hwid"
-    return 0
- else
-    echo "Invalid selection."
-    sleep 1
-    return 1
- fi
-
- echo "invalid selection"
+ echo "Invalid selection."
  sleep 1
  return 1
 }
+
+
 
 spoof_invalid_hwid() {
  local target="$1"
