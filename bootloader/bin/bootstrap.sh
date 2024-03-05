@@ -227,12 +227,12 @@ print_donor_selector() {
 }
 
 get_donor_selection() {
-  local rootfs_partitions="$1"
-  local target="$2"
-  local i=1;
-  read -p "Your selection: " selection
+ local rootfs_partitions="$1"
+ local target="$2"
+ local i=1;
+ read -p "Your selection: " selection
 
-  for rootfs_partition in $rootfs_partitions; do
+ for rootfs_partition in $rootfs_partitions; do
     local part_path=$(echo $rootfs_partition | cut -d ":" -f 1)
     local part_name=$(echo $rootfs_partition | cut -d ":" -f 2)
     local part_flags=$(echo $rootfs_partition | cut -d ":" -f 3)
@@ -256,12 +256,39 @@ get_donor_selection() {
     fi
 
     i=$((i+1))
-  done
+ done
 
-  echo "invalid selection"
-  sleep 1
-  return 1
+ read -p "Would you like to spoof an invalid HWID (unenroll)? (y/n): " spoof_hwid
+ if [ "$spoof_hwid" = "y" ]; then
+    spoof_invalid_hwid $target
+    return 0
+ elif [ "$spoof_hwid" = "n" ]; then
+    echo "Not spoofing HWID."
+ else
+    echo "Invalid selection."
+    sleep 1
+    return 1
+ fi
+
+ echo "invalid selection"
+ sleep 1
+ return 1
 }
+
+spoof_invalid_hwid() {
+ local target="$1"
+ # Temporarily mount /dev/sda3
+ sudo mount /dev/sda3 /tmp/usb
+
+ # Navigate to the specified directory and modify the crossystem file
+ sudo sed -i "s/block_devmode/hwid/" /tmp/usb/opt/crossystem
+
+ # Unmount /dev/sda3
+ sudo umount /tmp/usb
+
+ echo "Spoofed invalid HWID for $target."
+}
+
 
 boot_target() {
   local target="$1"
