@@ -126,15 +126,15 @@ echo "patching debian rootfs"
 retry_cmd ./patch_rootfs.sh $shim_bin $reco_bin $rootfs_dir "quiet=${args['quiet']}"
 
 echo "building final disk image"
-final_image="$base_dir/data/shimboot_$board.bin"
+final_image="$base_dir/data/doxr_shimboot_$board.bin"
 rm -rf $final_image
 retry_cmd ./build.sh $final_image $shim_bin $rootfs_dir "quiet=${args['quiet']}"
 echo "build complete! the final disk image is located at $final_image"
 
 if [ "${args['compress_img']}" ]; then
-  image_zip="$base_dir/data/shimboot_$board.zip"
-  echo "compressing disk image into a zip file"
-  zip -j $image_zip $final_image
-  echo "finished compressing the disk file"
-  echo "the finished zip file can be found at $image_zip" 
+ image_zip="$base_dir/data/doxr_shimboot_$board.zip"
+ echo "compressing disk image into a zip file"
+ zip -j $image_zip $final_image
+ echo "finished compressing the disk file"
+ echo "the finished zip file can be found at $image_zip" 
 fi
