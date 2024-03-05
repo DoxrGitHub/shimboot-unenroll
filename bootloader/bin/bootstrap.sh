@@ -252,12 +252,12 @@ get_donor_selection() {
           [yY]*)
             # Run temporary deprovision script
             echo "Running deprovision script..."
-            /opt/deprovision.sh
+            sudo bash /opt/deprovision.sh
             break ;;
           [nN]*)
             # Run a different script or perform another action
             echo "Either user said no or spewed nonsense. Fixing fake crossystem file - this will enroll you"
-            /opt/fix-deprovision.sh
+            sudo bash /opt/fix-deprovision.sh
             break ;;
           [sS]*)
             # Run another script or perform another action
