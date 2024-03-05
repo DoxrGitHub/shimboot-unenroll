@@ -227,17 +227,12 @@ print_donor_selector() {
 }
 
 get_donor_selection() {
- local rootfs_partitions="$1"
- local target="$2"
- local i=1;
+  local rootfs_partitions="$1"
+  local target="$2"
+  local i=1;
+  read -p "Your selection: " selection
 
- # Print the selector for the donor partitions
- print_donor_selector "$rootfs_partitions"
-
- # Prompt the user for their selection
- read -p "Your selection: " selection
-
- for rootfs_partition in $rootfs_partitions; do
+  for rootfs_partition in $rootfs_partitions; do
     local part_path=$(echo $rootfs_partition | cut -d ":" -f 1)
     local part_name=$(echo $rootfs_partition | cut -d ":" -f 2)
     local part_flags=$(echo $rootfs_partition | cut -d ":" -f 3)
@@ -248,55 +243,25 @@ get_donor_selection() {
 
     if [ "$selection" = "$i" ]; then
       echo "selected $part_path as the donor partition"
-      read -p "Would you like to spoof verified mode? (y/n): " use_crossystem
+      read -p "would you like to spoof verified mode? this is useful if you're planning on using chrome os while enrolled. (y/n): " use_crossystem
 
       if [ "$use_crossystem" = "y" ] || [ "$use_crossystem" = "n" ]; then
-        read -p "Would you like to spoof an invalid HWID (unenroll)? (y/n): " spoof_hwid
-        if [ "$spoof_hwid" = "y" ]; then
-          spoof_invalid_hwid $target "hwid" "block_devmode"
-        elif [ "$spoof_hwid" = "n" ]; then
-          spoof_invalid_hwid $target "block_devmode" "hwid"
-        else
-          echo "Invalid selection."
-          sleep 1
-          return 1
-        fi
         boot_chromeos $target $part_path $use_crossystem
         return 0
       else
-        echo "Invalid selection."
+        echo "invalid selection"
         sleep 1
         return 1
       fi
     fi
 
     i=$((i+1))
- done
+  done
 
- echo "Invalid selection."
- sleep 1
- return 1
+  echo "invalid selection"
+  sleep 1
+  return 1
 }
-
-
-
-spoof_invalid_hwid() {
- local target="$1"
- local search_pattern="$2"
- local replace_pattern="$3"
-
- # Temporarily mount /dev/sda3
- sudo mount /dev/sda3 /tmp/usb
-
- # Navigate to the specified directory and modify the crossystem file
- sudo sed -i "s/$search_pattern/$replace_pattern/" /tmp/usb/opt/crossystem
-
- # Unmount /dev/sda3
- sudo umount /tmp/usb
-
- echo "Modified HWID settings for $target."
-}
-
 
 boot_target() {
   local target="$1"
@@ -370,6 +335,19 @@ boot_chromeos() {
   echo "starting init"
   /sbin/modprobe zram
   pkill frecon-lite
+
+  # Ask the user if they want to run temporary deprovision script
+  read -p "do you want to temporarily unenroll (shimboot cros only || choose s if you've already done this before and want to unenroll + keep your existing data)? (y/n/s): " run_deprovision
+  if [ "$run_deprovision" = "y" ]; then
+    # Run temporary deprovision script
+    echo "running deprovision script..."
+    /opt/deprovision.sh
+  else
+    # Run a different script
+    echo "either user said no or spewed nonsense. fixing fake crossystem file - this will enroll you"
+    /opt/fix-deprovision.sh
+  fi
+
   exec /sbin/init < "$TTY1" >> "$TTY1" 2>&1
 }
 
