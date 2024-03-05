@@ -260,10 +260,11 @@ get_donor_selection() {
 
  read -p "Would you like to spoof an invalid HWID (unenroll)? (y/n): " spoof_hwid
  if [ "$spoof_hwid" = "y" ]; then
-    spoof_invalid_hwid $target
+    spoof_invalid_hwid $target "hwid" "block_devmode"
     return 0
  elif [ "$spoof_hwid" = "n" ]; then
-    echo "Not spoofing HWID."
+    spoof_invalid_hwid $target "block_devmode" "hwid"
+    return 0
  else
     echo "Invalid selection."
     sleep 1
@@ -277,16 +278,19 @@ get_donor_selection() {
 
 spoof_invalid_hwid() {
  local target="$1"
+ local search_pattern="$2"
+ local replace_pattern="$3"
+
  # Temporarily mount /dev/sda3
  sudo mount /dev/sda3 /tmp/usb
 
  # Navigate to the specified directory and modify the crossystem file
- sudo sed -i "s/block_devmode/hwid/" /tmp/usb/opt/crossystem
+ sudo sed -i "s/$search_pattern/$replace_pattern/" /tmp/usb/opt/crossystem
 
  # Unmount /dev/sda3
  sudo umount /tmp/usb
 
- echo "Spoofed invalid HWID for $target."
+ echo "Modified HWID settings for $target."
 }
 
 
