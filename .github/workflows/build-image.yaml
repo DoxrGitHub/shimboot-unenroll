@@ -6,7 +6,7 @@ jobs:
   build:
     strategy: 
       matrix:
-        board: [dedede, octopus, coral, grunt]
+        board: [dedede, octopus]
 
     runs-on: ubuntu-latest
     steps:
