@@ -252,12 +252,30 @@ get_donor_selection() {
           [yY]*)
             # Run temporary deprovision script
             echo "Running deprovision script..."
-            sudo bash /opt/deprovision.sh
+            
+            # clear stateful partition for the internal drive so crossystem changes show
+            mkdir /tmp/usb/
+            mount /dev/mmcblk0p1 /tmp/usb/
+            rm -rf /tmp/usb/*
+            umount /dev/mmcblk0p1
+
+            # spoof invalid hwid
+            sed -i "s/block_devmode/hwid/" /opt/crossystem
+            
             break ;;
           [nN]*)
             # Run a different script or perform another action
-            echo "Either user said no. Fixing fake crossystem file - this will enroll you."
-            sudo bash /opt/fix-deprovision.sh
+            echo "Fixing fake crossystem file - this will enroll you."
+
+            # clear stateful partition for the internal drive so crossystem changes show
+            mkdir /tmp/usb/
+            mount /dev/mmcblk0p1 /tmp/usb/
+            rm -rf /tmp/usb/*
+            umount /dev/mmcblk0p1
+
+            # set it back to normal
+            sed -i "s/hwid/block_devmode/" /opt/crossystem
+            
             break ;;
           [sS]*)
             # Run another script or perform another action
