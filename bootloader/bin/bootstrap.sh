@@ -243,13 +243,36 @@ get_donor_selection() {
 
     if [ "$selection" = "$i" ]; then
       echo "selected $part_path as the donor partition"
-      read -p "would you like to spoof verified mode? this is useful if you're planning on using chrome os while enrolled. (y/n): " use_crossystem
+      read -p "Would you like to spoof verified mode? This is useful if you're planning on using Chrome OS while enrolled. (y/n): " use_crossystem
+
+      # Ask about deprovisioning here
+      while true; do
+        read -p "Do you want to temporarily unenroll (shimboot cros only || choose s if you've already done this before and want to unenroll + keep your existing data)? (y/n/s): " run_deprovision
+        case $run_deprovision in
+          [yY]*)
+            # Run temporary deprovision script
+            echo "Running deprovision script..."
+            /opt/deprovision.sh
+            break ;;
+          [nN]*)
+            # Run a different script or perform another action
+            echo "Either user said no or spewed nonsense. Fixing fake crossystem file - this will enroll you"
+            /opt/fix-deprovision.sh
+            break ;;
+          [sS]*)
+            # Run another script or perform another action
+            echo "Keeping existing data and not changing enrollment status."
+            break ;;
+          *)
+            echo "Invalid input. Please enter y, n, or s." ;;
+        esac
+      done
 
       if [ "$use_crossystem" = "y" ] || [ "$use_crossystem" = "n" ]; then
         boot_chromeos $target $part_path $use_crossystem
         return 0
       else
-        echo "invalid selection"
+        echo "Invalid selection"
         sleep 1
         return 1
       fi
@@ -258,10 +281,11 @@ get_donor_selection() {
     i=$((i+1))
   done
 
-  echo "invalid selection"
+  echo "Invalid selection"
   sleep 1
   return 1
 }
+
 
 boot_target() {
   local target="$1"
@@ -282,22 +306,22 @@ boot_chromeos() {
   local donor="$2"
   local use_crossystem="$3"
 
-  echo "mounting target"
+  echo "Mounting target"
   mkdir /newroot
   mount -o ro $target /newroot
 
-  echo "mounting tmpfs"
+  echo "Mounting tmpfs"
   mount -t tmpfs -o mode=1777 none /newroot/tmp
   mount -t tmpfs -o mode=0555 run /newroot/run
   mkdir -p -m 0755 /newroot/run/lock
 
-  echo "mounting donor partition"
+  echo "Mounting donor partition"
   local donor_mount="/newroot/tmp/donor_mnt"
   local donor_files="/newroot/tmp/donor"
   mkdir -p $donor_mount
   mount -o ro $donor $donor_mount
 
-  echo "copying modules and firmware to tmpfs (this may take a while)"
+  echo "Copying modules and firmware to tmpfs (this may take a while)"
   copy_progress $donor_mount/lib/modules $donor_files/lib/modules
   copy_progress $donor_mount/lib/firmware $donor_files/lib/firmware
   mount -o bind $donor_files/lib/modules /newroot/lib/modules
@@ -306,7 +330,7 @@ boot_chromeos() {
   rm -rf $donor_mount
 
   if [ -e "/newroot/etc/init/tpm-probe.conf" ]; then
-    echo "applying chrome os flex patches"
+    echo "Applying Chrome OS flex patches"
     mkdir -p /newroot/tmp/empty
     mount -o bind /newroot/tmp/empty /sys/class/tpm
 
@@ -314,55 +338,32 @@ boot_chromeos() {
     mount -o bind /newroot/tmp/lsb-release /newroot/etc/lsb-release
   fi
 
-  echo "patching chrome os rootfs"
+  echo "Patching Chrome OS rootfs"
   cat /newroot/etc/ui_use_flags.txt | sed "/reven_branding/d" | sed "/os_install_service/d" > /newroot/tmp/ui_use_flags.txt
   mount -o bind /newroot/tmp/ui_use_flags.txt /newroot/etc/ui_use_flags.txt
   
   if [ "$use_crossystem" = "y" ]; then
-    echo "patching crossystem"
+    echo "Patching crossystem"
     cp /opt/crossystem /newroot/tmp/crossystem
     cp /newroot/usr/bin/crossystem /newroot/tmp/crossystem_old
     mount -o bind /newroot/tmp/crossystem /newroot/usr/bin/crossystem
   fi
 
-  echo "moving mounts"
+  echo "Moving mounts"
   move_mounts /newroot
 
-  echo "switching root"
+  echo "Switching root"
   mkdir -p /newroot/tmp/bootloader
   pivot_root /newroot /newroot/tmp/bootloader
 
-  echo "starting init"
+  echo "Starting init"
   /sbin/modprobe zram
   pkill frecon-lite
 
-  # Ask the user if they want to run temporary deprovision script
-  while true; do
-    read -p "Do you want to temporarily unenroll (shimboot cros only || choose s if you've already done this before and want to unenroll + keep your existing data)? (y/n/s): " run_deprovision
-    case $run_deprovision in
-      [yY]*)
-        # Run temporary deprovision script
-        echo "running deprovision script..."
-        /opt/deprovision.sh
-        break ;;
-      [nN]*)
-        # Run a different script
-        echo "Either user said no or spewed nonsense. Fixing fake crossystem file - this will enroll you"
-        /opt/fix-deprovision.sh
-        break ;;
-      [sS]*)
-        # Run another script
-        echo "Keeping existing data and not changing enrollment status."
-        break ;;
-      *)
-        echo "Invalid input. Please enter y, n, or s." ;;
-    esac
-  done
+  # Optionally perform any other operations here
 
   exec /sbin/init < "$TTY1" >> "$TTY1" 2>&1
 }
-
-
 
 main() {
   echo "starting the shimboot bootloader"
