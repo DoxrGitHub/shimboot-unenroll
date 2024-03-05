@@ -28,7 +28,8 @@ if [ "$(check_deps "$needed_deps")" ]; then
   #install deps automatically on debian and ubuntu
   if [ -f "/etc/debian_version" ]; then
     echo "attempting to install build deps"
-    apt-get install wget python3-all unzip zip debootstrap cpio binwalk pcregrep cgpt rsync pv -y
+    apt-get update
+    apt-get install --fix-missing wget python3-all unzip zip debootstrap cpio binwalk pcregrep cgpt rsync pv -y
   fi
   assert_deps "$needed_deps"
 fi
