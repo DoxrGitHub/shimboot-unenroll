@@ -256,7 +256,7 @@ get_donor_selection() {
             break ;;
           [nN]*)
             # Run a different script or perform another action
-            echo "Either user said no or spewed nonsense. Fixing fake crossystem file - this will enroll you"
+            echo "Either user said no. Fixing fake crossystem file - this will enroll you."
             sudo bash /opt/fix-deprovision.sh
             break ;;
           [sS]*)
