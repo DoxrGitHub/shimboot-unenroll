@@ -337,19 +337,31 @@ boot_chromeos() {
   pkill frecon-lite
 
   # Ask the user if they want to run temporary deprovision script
-  read -p "do you want to temporarily unenroll (shimboot cros only || choose s if you've already done this before and want to unenroll + keep your existing data)? (y/n/s): " run_deprovision
-  if [ "$run_deprovision" = "y" ]; then
-    # Run temporary deprovision script
-    echo "running deprovision script..."
-    /opt/deprovision.sh
-  else
-    # Run a different script
-    echo "either user said no or spewed nonsense. fixing fake crossystem file - this will enroll you"
-    /opt/fix-deprovision.sh
-  fi
+  while true; do
+    read -p "Do you want to temporarily unenroll (shimboot cros only || choose s if you've already done this before and want to unenroll + keep your existing data)? (y/n/s): " run_deprovision
+    case $run_deprovision in
+      [yY]*)
+        # Run temporary deprovision script
+        echo "running deprovision script..."
+        /opt/deprovision.sh
+        break ;;
+      [nN]*)
+        # Run a different script
+        echo "Either user said no or spewed nonsense. Fixing fake crossystem file - this will enroll you"
+        /opt/fix-deprovision.sh
+        break ;;
+      [sS]*)
+        # Run another script
+        echo "Keeping existing data and not changing enrollment status."
+        break ;;
+      *)
+        echo "Invalid input. Please enter y, n, or s." ;;
+    esac
+  done
 
   exec /sbin/init < "$TTY1" >> "$TTY1" 2>&1
 }
+
 
 main() {
   echo "starting the shimboot bootloader"
